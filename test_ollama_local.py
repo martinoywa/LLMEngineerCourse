@@ -11,8 +11,7 @@ def run_ollama(model: str = "gemma2", stream: bool = False):
     ]
 
     if stream:
-        response = chat(model, messages=messages, stream=True)
-        for part in response:
+        for part in chat(model, messages=messages, stream=True):
             print(part['message']['content'], end='', flush=True)
     else:
         response: ChatResponse = chat(model, messages=messages)

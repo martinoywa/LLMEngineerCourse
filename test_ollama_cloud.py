@@ -9,7 +9,7 @@ OLLAMA_API_KEY = os.getenv('OLLAMA_API_KEY')
 
 client = Client(
     host="https://ollama.com",
-    headers={'Authorization': 'Bearer ' + OLLAMA_API_KEY}
+    headers={'Authorization': f'Bearer {OLLAMA_API_KEY}'}
 )
 
 messages = [
