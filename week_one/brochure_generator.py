@@ -8,7 +8,7 @@ from utils import extract_json
 
 dotenv.load_dotenv()
 LARGE_MODEL_NAME = os.getenv('LARGE_MODEL_NAME', 'gpt-oss:120b')
-SMALL_MODEL_NAME = os.getenv('SMALL_MODEL_NAME', 'gpt-oss:20b-cloud')
+SMALL_MODEL_NAME = os.getenv('SMALL_MODEL_NAME', 'gemma2:latest')
 
 local_client = OpenAI(
     base_url="http://localhost:11434/v1/",
@@ -101,17 +101,23 @@ def generate_brochure(combined_content: str, client) -> None:
         {"role": "user", "content": f"{relevant_links}"},
     ]
 
-    for part in client.chat(model=LARGE_MODEL_NAME, messages=messages, stream=True):
-        print(part['message']['content'], end='', flush=True)
+    with client.responses.stream(
+        model=LARGE_MODEL_NAME,
+        input=messages,
+    ) as stream:
+        for event in stream:
+            if event.type == "response.output_text.delta":
+                print(event.delta, end="", flush=True)
 
 
 if __name__ == "__main__":
-    website = "https://www.huggingface.co" # "https://edwarddonner.com/"
+    website = "https://huggingface.co/" # "https://edwarddonner.com/"
     links = fetch_website_links(website)
-    print(f"Fetched Links Count: {len(links)}, Examples: {links}\n")
+    # print(f"Fetched Links Count: {len(links)}, Examples: {links}\n")
     relevant_links = get_relevant_links(website, links, local_client)
-    print(f"Relevant Links Count: {len(relevant_links['relevant_links'])}, Examples: {relevant_links}\n")
-    # combined_content = get_and_combine_all_content(relevant_links)
+    # print(f"Relevant Links Count: {len(relevant_links['relevant_links'])}, Examples: {relevant_links}\n")
+    combined_content = get_and_combine_all_content(relevant_links)
     # print(f"Combined Content Length: {len(combined_content)} characters\n")
-    # print(f"Sample of Combined Content:\n{combined_content[:1000]}\n")
-    # generate_brochure(relevant_links, cloud_client)
+    # print(f"Sample of Combined Content:\n{combined_content}\n")
+    print("Generated Brochure:\n")
+    generate_brochure(combined_content, cloud_client)
