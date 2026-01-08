@@ -1,4 +1,6 @@
 from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+
 import requests
 from dotenv import load_dotenv
 import os
@@ -14,21 +16,39 @@ headers = {
 }
 
 
-def fetch_website_contents(url):
+def fetch_website_contents(url: str, timeout: int = 15_000) -> str:
     """
-    Return the title and contents of the website at the given url;
-    truncate to 2,000 characters as a sensible limit
+    Fetch fully rendered website content (JS executed).
+    Returns title + visible text, truncated to 2,000 characters.
     """
-    response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.content, "html.parser")
-    title = soup.title.string if soup.title else "No title found"
-    if soup.body:
-        for irrelevant in soup.body(["script", "style", "img", "input"]):
-            irrelevant.decompose()
-        text = soup.body.get_text(separator="\n", strip=True)
-    else:
-        text = ""
-    return (title or "" + "\n\n" + text or "")[:2_000] 
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+
+        try:
+            # Use domcontentloaded instead of networkidle
+            page.goto(url, timeout=timeout, wait_until="domcontentloaded")
+
+            # Optional: give JS a short moment to populate content
+            page.wait_for_timeout(1_500)
+
+        except PlaywrightTimeout:
+            print(f"[WARN] Timeout loading {url}, continuing with partial content")
+
+        html = page.content()
+        browser.close()
+
+    soup = BeautifulSoup(html, "html.parser")
+
+    title = soup.title.string.strip() if soup.title and soup.title.string else "No title found"
+
+    for tag in soup(["script", "style", "noscript", "img", "svg", "input"]):
+        tag.decompose()
+
+    text = soup.get_text(separator="\n", strip=True)
+
+    return ((title + "\n\n" + text)[:2_000])
 
 
 def fetch_website_links(url):
