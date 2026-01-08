@@ -98,7 +98,7 @@ def generate_brochure(combined_content: str, client) -> None:
     """
     messages = [
         {"role": "system", "content": BROCHURE_SYSTEM_PROMPT},
-        {"role": "user", "content": f"{relevant_links}"},
+        {"role": "user", "content": f"{combined_content}"},
     ]
 
     with client.responses.stream(
@@ -118,6 +118,6 @@ if __name__ == "__main__":
     # print(f"Relevant Links Count: {len(relevant_links['relevant_links'])}, Examples: {relevant_links}\n")
     combined_content = get_and_combine_all_content(relevant_links)
     # print(f"Combined Content Length: {len(combined_content)} characters\n")
-    # print(f"Sample of Combined Content:\n{combined_content}\n")
+    # print(f"Sample of Combined Content:\n{combined_content[:200]}\n")
     print("Generated Brochure:\n")
     generate_brochure(combined_content, cloud_client)
